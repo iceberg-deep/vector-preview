@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<!-- TEMPLATE landing page. Brand-defining strings, colors, and fonts are
+     placeholders injected from brand.config.json by scripts/render-landing.mjs
+     at deploy time (run via scripts/deploy-web.sh). The committed source stays
+     path- and brand-agnostic on purpose. The three feature-card descriptions
+     below are generic template defaults — edit them here for deeper copy. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<!-- Clickjacking guard: GitHub Pages can't send X-Frame-Options, so bust out of
+     any frame. (frame-ancestors isn't enforceable via <meta>.) -->
+<script>try{if(window.top!==window.self){window.top.location=window.self.location;}}catch(e){window.top.location="https://iceberg-deep.github.io/vector-preview/";}</script>
+<title>Vector — Web application security, intermediate to expert</title>
+<meta name="description" content="By the last lesson you can take a target you've never seen, decide what's actually exploitable, prove it, and write up the finding — injection, XSS, SSRF, XXE, deserialization, auth and access, request smuggling, race conditions. Intermediate to expert. Free to start." />
+<link rel="canonical" href="https://iceberg-deep.github.io/vector-preview/" />
+<!-- Link-preview card (SMS/iMessage/WhatsApp/Discord/Slack/X). og:image is a
+     1200x630 proof-of-depth card (web/og.png), copied to the site root at deploy. -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Vector" />
+<meta property="og:url" content="https://iceberg-deep.github.io/vector-preview/" />
+<meta property="og:title" content="Vector — Find it, prove it, write it up" />
+<meta property="og:description" content="Take a target you've never seen, decide what's actually exploitable, and prove it — injection, XSS, SSRF, auth bypass, request smuggling. Intermediate to expert. Free to start." />
+<meta property="og:image" content="https://iceberg-deep.github.io/vector-preview/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Vector — an annotated SQL-injection request and the response it leaks" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Vector — Find it, prove it, write it up" />
+<meta name="twitter:description" content="Take a target you've never seen, decide what's actually exploitable, and prove it — injection, XSS, SSRF, auth bypass, request smuggling. Intermediate to expert. Free to start." />
+<meta name="twitter:image" content="https://iceberg-deep.github.io/vector-preview/og.png" />
+<!-- CTA hrefs use the /vector-preview/app/ placeholder; scripts/deploy-web.sh injects the real
+     app path at deploy time, the same way the Expo baseUrl is handled. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  /* Identity comes from brand.config.json (theme.colors.dark + theme.fonts),
+     injected at deploy time. Keep visual decisions in config, not here. */
+  :root{
+    --bg:#0B0714; --panel:#14101F; --panel2:#100c1a; --line:#2A2342;
+    --text:#E8E9F2; --dim:#9A93B0; --signal:#B026FF; --amber:#22E0FF;
+    --danger:#FF2A6D; --teal:#B026FF; --violet:#B026FF;
+    --display:'Rajdhani',sans-serif; --mono:'JetBrains Mono',monospace; --body:'Sora',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--body);
+    line-height:1.6; -webkit-font-smoothing:antialiased; overflow-x:hidden;
+    background-image:
+      radial-gradient(120% 70% at 50% -10%, var(--panel) 0%, var(--bg) 55%),
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:100% 100%, 44px 44px, 44px 44px;
+    background-position:0 0, 0 0, 0 0;
+  }
+  body::before{ /* fade the grid out so it reads as faint texture */
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:radial-gradient(130% 90% at 50% 20%, transparent 0%, var(--bg) 75%);
+  }
+  .wrap{position:relative; z-index:1; max-width:1080px; margin:0 auto; padding:0 22px}
+  a{color:inherit; text-decoration:none}
+
+  /* fade-up: content visible by default, animated only as enhancement */
+  .rise{animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
+  .d1{animation-delay:.05s}.d2{animation-delay:.13s}.d3{animation-delay:.21s}.d4{animation-delay:.29s}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.rise{animation:none}}
+
+  /* top bar */
+  header{position:relative; z-index:2}
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:20px 0}
+  .brand{display:flex; align-items:center; gap:10px}
+  .logo{width:34px;height:34px;border-radius:9px;background:var(--signal);
+    display:grid;place-items:center;box-shadow:0 0 22px color-mix(in srgb,var(--signal) 45%,transparent)}
+  .logo svg{width:19px;height:19px}
+  .wordmark{font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.3px}
+  .nav-cta{font-family:var(--body);font-weight:700;font-size:14px;color:#fff;
+    background:var(--signal);padding:9px 18px;border-radius:10px;transition:transform .15s,opacity .15s}
+  .nav-cta:hover{transform:translateY(-1px);opacity:.92}
+
+  /* hero */
+  .hero{padding:70px 0 64px; text-align:center}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:2px;color:var(--signal);
+    text-transform:uppercase;margin-bottom:20px}
+  h1{font-family:var(--display);font-weight:800;letter-spacing:-1.5px;line-height:1.0;
+    font-size:clamp(44px,9vw,84px)}
+  h1 .accent{color:var(--signal);font-weight:800}
+  .sub{font-size:clamp(16px,2.4vw,20px);color:var(--text);max-width:620px;margin:24px auto 0;
+    line-height:1.55}
+  .sub b{color:var(--signal);font-weight:600}
+  .ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:36px}
+  .btn{font-family:var(--body);font-weight:600;font-size:16px;padding:15px 30px;border-radius:13px;
+    transition:transform .15s,opacity .15s,border-color .15s;display:inline-flex;align-items:center;gap:9px}
+  .btn-primary{background:var(--signal);color:#fff;box-shadow:0 8px 30px color-mix(in srgb,var(--signal) 32%,transparent)}
+  .btn-primary:hover{transform:translateY(-2px)}
+  .btn-ghost{border:1px solid var(--line);color:var(--text);background:var(--panel2)}
+  .btn-ghost:hover{border-color:var(--signal)}
+  .micro{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:20px}
+
+  /* section scaffold */
+  section{padding:46px 0}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:1.8px;color:var(--dim);
+    text-transform:uppercase;margin-bottom:14px;text-align:center}
+  .lead{font-family:var(--display);font-weight:600;font-size:clamp(24px,4vw,34px);letter-spacing:-.5px;
+    text-align:center;max-width:760px;margin:0 auto;line-height:1.25}
+
+  /* value cards */
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:38px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 22px;
+    border-top:3px solid var(--accent,var(--signal));transition:transform .18s,border-color .18s}
+  .card:hover{transform:translateY(-3px)}
+  .card .ico{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;margin-bottom:16px;
+    background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+  .card .ico svg{width:23px;height:23px;stroke:var(--accent)}
+  .card h3{font-family:var(--display);font-weight:600;font-size:20px;margin-bottom:8px}
+  .card p{font-size:14.5px;color:var(--dim);line-height:1.6}
+  .c1{--accent:var(--signal)}.c2{--accent:var(--teal)}.c3{--accent:var(--violet)}
+
+  /* honesty block */
+  .honesty{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--amber);
+    border-radius:16px;padding:34px 30px;max-width:780px;margin:0 auto}
+  .honesty .tag{font-family:var(--mono);font-size:12px;letter-spacing:1.5px;color:var(--amber);
+    text-transform:uppercase;margin-bottom:14px}
+  .honesty h2{font-family:var(--display);font-weight:600;font-size:clamp(22px,3.6vw,30px);
+    letter-spacing:-.5px;margin-bottom:12px;line-height:1.2}
+  .honesty p{font-size:16px;color:var(--text);line-height:1.6}
+  .honesty p b{color:var(--amber);font-weight:600}
+
+  /* modalities strip */
+  .mods{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:30px}
+  .mod{font-family:var(--mono);font-size:13px;color:var(--text);background:var(--panel);
+    border:1px solid var(--line);border-radius:999px;padding:9px 16px;display:flex;align-items:center;gap:8px}
+  .mod svg{width:15px;height:15px;stroke:var(--signal)}
+
+  /* free tier callout */
+  .free{background:linear-gradient(135deg,color-mix(in srgb,var(--signal) 12%,transparent),var(--panel));
+    border:1px solid color-mix(in srgb,var(--signal) 35%,transparent);border-radius:20px;
+    padding:40px 30px;text-align:center;margin-top:10px}
+  .free h2{font-family:var(--display);font-weight:800;font-size:clamp(26px,4.6vw,40px);letter-spacing:-1px}
+  .free p{color:var(--dim);max-width:520px;margin:14px auto 26px;font-size:16px}
+
+  /* closing */
+  .close{text-align:center;padding:64px 0 30px}
+  .close .line{font-family:var(--display);font-weight:600;font-size:clamp(22px,3.6vw,30px);
+    color:var(--dim);letter-spacing:-.4px;margin-bottom:26px}
+  .close .line b{color:var(--text);font-style:italic;font-weight:600}
+
+  /* footer */
+  footer{border-top:1px solid var(--line);padding:26px 0 40px;margin-top:30px}
+  .foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+    font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .foot a:hover{color:var(--signal)}
+
+  /* proof: annotated PoC + discovery lab artifacts */
+  .proof-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:34px;align-items:start}
+  .artifact{display:flex;flex-direction:column;gap:13px}
+  .cap{font-size:14px;color:var(--dim);line-height:1.55}
+  .cap b{color:var(--text);font-weight:600}
+  /* source block (mirrors the in-app annotated request/response) */
+  .src{background:var(--panel2);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .src + .src{margin-top:10px}
+  .src-head{padding:7px 13px;border-left:3px solid var(--amber);background:var(--panel);
+    font-family:var(--mono);font-size:10.5px;letter-spacing:1.4px;color:var(--amber)}
+  .src-head.res{border-left-color:var(--signal);color:var(--signal)}
+  .src-body{padding:12px 14px;font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--text)}
+  .ln{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}     /* mobile: long packet lines wrap, never clip */
+  .ln .dim{color:var(--dim)}
+  .ln .ok{color:var(--amber)}
+  .hl{color:var(--danger);text-decoration:underline;text-underline-offset:2px}
+  .note{color:var(--danger);font-size:11.5px;line-height:1.45;margin:3px 0 9px;padding-left:2px;overflow-wrap:anywhere}
+  .note.info{color:var(--amber)}
+  /* discovery lab mini */
+  .lab{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .lab-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:1.4px;color:var(--signal);margin-bottom:9px}
+  .lab-q{font-family:var(--display);font-weight:600;font-size:16px;line-height:1.3;margin-bottom:13px;letter-spacing:-.2px}
+  .move{display:flex;align-items:flex-start;gap:9px;border:1px solid var(--line);border-radius:9px;
+    padding:9px 11px;margin-bottom:7px;font-family:var(--mono);font-size:11.5px;line-height:1.4;color:var(--dim)}
+  .move .tick{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--line);flex-shrink:0;margin-top:1px}
+  .move.win{border-color:var(--signal);background:color-mix(in srgb,var(--signal) 12%,transparent);color:var(--text)}
+  .move.win .tick{border-color:var(--signal);background:var(--signal);display:grid;place-items:center}
+  .move.win .tick svg{width:11px;height:11px;stroke:var(--bg);stroke-width:3}
+  .verdict{font-family:var(--display);font-weight:600;font-size:14.5px;color:var(--signal);margin:13px 0 7px}
+  .reveal{font-size:12.5px;color:var(--dim);line-height:1.55;border-left:2px solid var(--signal);padding-left:11px}
+  .level{font-family:var(--mono);font-size:12.5px;color:var(--dim);text-align:center;margin-top:26px}
+  /* demoted method line */
+  .method{font-size:clamp(15px,2.2vw,17px);color:var(--dim);text-align:center;max-width:680px;
+    margin:0 auto;line-height:1.6}
+
+  @media (max-width:760px){
+    .cards{grid-template-columns:1fr}
+    .proof-grid{grid-template-columns:1fr}
+    .hero{padding:48px 0 40px}
+    section{padding:34px 0}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <nav class="nav rise">
+        <div class="brand">
+          <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0B0714" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 8v8M15 8v8M9 12h6"/></svg>
+          </div>
+          <span class="wordmark">VECTOR</span>
+        </div>
+        <a class="nav-cta" href="/vector-preview/app/">Start free</a>
+      </nav>
+    </header>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="kicker rise d1">Root cause before payload · Sandboxed labs · No fluff</div>
+      <h1 class="rise d2">Don't memorize payloads.<br/><span class="accent">Understand them.</span></h1>
+      <p class="sub rise d3">By the last lesson you can take a target you've never seen, decide what's actually exploitable, prove it, and write up the finding — across the bug classes that matter: injection, XSS, SSRF, XXE, deserialization, auth and access, request smuggling, race conditions.</p>
+      <div class="ctas rise d4">
+        <a class="btn btn-primary" href="/vector-preview/app/">Start learning free
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a class="btn btn-ghost" href="#how">See the depth</a>
+      </div>
+      <div class="micro rise d4">Ten minutes a day · No sign-up to start · Intermediate → expert</div>
+    </div>
+
+    <!-- OUTCOMES — the prime slot: what you can DO, not what's covered -->
+    <section>
+      <p class="eyebrow">What you'll be able to do</p>
+      <p class="lead">Not topics covered — things you can do by the end.</p>
+      <div class="cards">
+        <div class="card c1">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg></div>
+          <h3>Read a target and call it</h3>
+          <p>Look at an endpoint and judge whether it's even worth a payload — before you spend one. Knowing where not to dig is half the skill.</p>
+        </div>
+        <div class="card c2">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></div>
+          <h3>Find it, then chain it</h3>
+          <p>Land SQLi, SSTI, XSS, SSRF, XXE, deserialization, JWT and auth bypasses, request smuggling, race conditions — and chain small bugs into one critical finding.</p>
+        </div>
+        <div class="card c3">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+          <h3>Prove it and write it up</h3>
+          <p>The exact repro request, the response that proves impact, rated and reported the way an engagement expects — a clear finding, not a vague ticket.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROOF — two embedded artifacts: the annotated PoC + the discovery lab -->
+    <section id="how">
+      <p class="eyebrow">See the depth</p>
+      <p class="lead">Every lesson shows the exact bytes — not slides about them.</p>
+      <div class="proof-grid">
+
+        <!-- Artifact A: annotated SQLi PoC (mirrors the in-app Visual) -->
+        <div class="artifact rise">
+          <div>
+            <div class="src">
+              <div class="src-head">REQUEST</div>
+              <div class="src-body">
+                <div class="ln"><span class="ok">GET</span> /orders?id=1052 <span class="hl">OR 1=1</span> <span class="dim">HTTP/1.1</span></div>
+                <div class="note">↳ INJECTED — read as SQL, not data: the WHERE clause is true for every row</div>
+                <div class="ln"><span class="dim">Host:</span> shop.example</div>
+              </div>
+            </div>
+            <div class="src">
+              <div class="src-head res">RESPONSE</div>
+              <div class="src-body">
+                <div class="ln"><span class="dim">HTTP/1.1</span> <span class="ok">200 OK</span></div>
+                <div class="ln">{"orders":[ <span class="hl">…every order in the table…</span> ]}</div>
+                <div class="note">↳ LEAK — rows far beyond the caller's own</div>
+              </div>
+            </div>
+          </div>
+          <p class="cap">A lesson visual: the injected payload and the leak, annotated inline — request and response, the way you'll actually read them.</p>
+        </div>
+
+        <!-- Artifact B: discovery lab, landing on the SAFE verdict -->
+        <div class="artifact rise d2">
+          <div class="lab">
+            <div class="lab-tag">DISCOVERY LAB</div>
+            <div class="lab-q">A bare quote came back clean. Is there a move here?</div>
+            <div class="src">
+              <div class="src-head">PROBE &amp; RESPONSE</div>
+              <div class="src-body">
+                <div class="ln"><span class="ok">GET</span> /products?q=widget<span class="hl">'</span> <span class="dim">HTTP/1.1</span></div>
+                <div class="ln"><span class="dim">HTTP/1.1</span> <span class="ok">200 OK</span> — {"results":[ {"name":"widget"} ]}</div>
+                <div class="note info">↳ no SQL error · result unchanged</div>
+              </div>
+            </div>
+            <div class="move"><span class="tick"></span>Escalate — q=widget' OR '1'='1</div>
+            <div class="move win"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Nothing to chase — the parameter is bound. Move on.</div>
+            <div class="verdict">Correct call — nothing to exploit here</div>
+            <div class="reveal">No error, no change in the result: the value is bound to a placeholder, so it can only ever be data. A real tester reads that and walks — chasing OR 1=1 here only burns time it'll never reward.</div>
+          </div>
+          <p class="cap">Other platforms hand you the bug. Here you decide if there even is one — and "it's safe, leave it" is a winning answer.</p>
+        </div>
+
+      </div>
+      <p class="level">If this reads as routine, you're who it's built for.</p>
+    </section>
+
+    <!-- METHOD (demoted) — the multi-modal engine, one line + the pills -->
+    <section>
+      <p class="method">Every concept hits five ways — read, see, hear, recall, do — sequenced first principles to frontier, with spaced repetition so it stays learned.</p>
+      <div class="mods">
+        <span class="mod"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Read</span>
+        <span class="mod"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>See</span>
+        <span class="mod"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>Hear</span>
+        <span class="mod"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v6h6M21 12a9 9 0 1 1-3-6.7L21 8"/></svg>Recall</span>
+        <span class="mod"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg>Do</span>
+      </div>
+    </section>
+
+    <!-- HONESTY -->
+    <section>
+      <div class="honesty rise">
+        <div class="tag">No inflated promises</div>
+        <h2>We won't sell you a cert. We'll teach you to find real bugs.</h2>
+        <p>What you get is the part that transfers: the broken assumption behind each vulnerability class, the exact mechanism, and the reasoning to spot it in code you've never seen. Recognition and intuition — not a list of payloads to paste.</p>
+      </div>
+    </section>
+
+    <!-- FREE TIER -->
+    <section>
+      <div class="free rise">
+        <h2>Start free. Go deep when you're ready.</h2>
+        <p>The entire first track — foundations and reconnaissance, every lesson and every way of learning — costs nothing, and you can jump in with no account. Sign in to save your progress, and upgrade only when you want the rest.</p>
+        <a class="btn btn-primary" href="/vector-preview/app/">Open Vector
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+    </section>
+
+    <!-- CLOSING -->
+    <div class="close">
+      <p class="line">Ten minutes a day. Root cause before payload.<br/><b>Just understanding.</b></p>
+      <a class="btn btn-primary" href="/vector-preview/app/">Start learning free
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <footer>
+      <div class="foot">
+        <span>© Vector · intermediate to expert, one climb</span>
+        <a href="/vector-preview/app/#privacy">Privacy &amp; data</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
